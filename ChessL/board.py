@@ -59,9 +59,10 @@ class Board:
         
         moves = self.get_every_move(bo)
         if len(moves) == 0:
-            if self.check(WHITE):
-                return -999999
-            return 0
+            # No legal moves: checkmate (worst for the side to move) or stalemate.
+            if self.check(self.turn):
+                return None, -999999 if self.turn == WHITE else 999999
+            return None, 0
         best_move = random.choice(moves)
         if maxPlayer:
             maxEval = -999999
@@ -96,6 +97,12 @@ class Board:
 
     def is_game_over(self):
         return False
+
+    def game_result(self):
+        # For the side to move (self.turn): None while it has a legal move.
+        if self.get_every_move(self):
+            return None
+        return CHECKMATE if self.check(self.turn) else STALEMATE
     
     def change_turn(self):
         if self.turn == WHITE:
@@ -252,7 +259,6 @@ class Board:
             fen = self.undos.pop()
             self.redos.append(fen)
             self.load_FEN(self.undos[-1])
-            self.change_turn()
 
     def redo(self):
         if self.redos:

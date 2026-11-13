@@ -3,6 +3,7 @@ from constants import *
 from pieces import *
 pygame.font.init()
 FONT = pygame.font.SysFont('Times New Roman', 50)
+SMALL_FONT = pygame.font.SysFont('Times New Roman', 26)
 
 
 class Control:
@@ -12,6 +13,7 @@ class Control:
         self.move_text = "Hi"
         self.mode = HUMAN_HUMAN
         self.board_img = None
+        self.result = None  # CHECKMATE or STALEMATE once the game has ended
 
 
     def draw_window(self, win, w, h):
@@ -38,5 +40,17 @@ class Control:
         pygame.draw.rect(win, panel_color, (w, 0, w // 4, h))
         text = FONT.render(self.move_text, False, black)
         win.blit(text, (w + w // 8 - text.get_width() // 2, h // 2 - text.get_height() // 2))
+        if self.result:
+            if self.result == CHECKMATE:
+                winner = "White" if flip_turn(self.bo.turn) == WHITE else "Black"
+                lines = ["Checkmate", winner + " wins"]
+            else:
+                lines = ["Stalemate", "Draw"]
+            lines += ["", "Press R or click", "here to play again"]
+            y = h // 2 + text.get_height()
+            for line in lines:
+                rendered = SMALL_FONT.render(line, True, red if line in lines[:2] else black)
+                win.blit(rendered, (w + w // 8 - rendered.get_width() // 2, y))
+                y += rendered.get_height() + 4
 
         pygame.display.update()

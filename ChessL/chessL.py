@@ -20,12 +20,14 @@ def fit_browser_canvas():
 
 async def main():
     def AI_move():
+        if control.result:
+            return
         fen = control.bo.create_FEN()
         move = control.bo.get_best_move()[0]
         control.bo.load_FEN(fen)
         control.bo.resize_pieces(w, h)
         control.bo.set_every_pos()
-        if control.bo.move(move[0], move[1]):
+        if move and control.bo.move(move[0], move[1]):
             # for promotion
             s, e = move
             if isinstance(control.bo.board[e[0]][e[1]], Pawn):
@@ -40,14 +42,31 @@ async def main():
             control.move_text = chr(97 + c) + str(8-r) + '-' + chr(97 + x) + str(8-y)
 
     def todo_after_move():
+        # Saved positions name the side to move, like the start position does,
+        # so undo and redo restore whose turn it is.
+        control.bo.change_turn()
         fen = control.bo.create_FEN()
         if control.bo.redos:
             if control.bo.redos[-1] != fen:
                 control.bo.redos =  []                        
         control.bo.undos.append(fen)
         control.bo.print_board()
-        print(control.bo.create_FEN())
-        control.bo.change_turn()
+        print(fen)
+        control.result = control.bo.game_result()
+
+    def after_history_change():
+        control.result = control.bo.game_result()
+        control.bo.resize_pieces(w, h)
+        control.bo.set_every_pos()
+
+    def new_game():
+        control.bo = Board()
+        control.result = None
+        control.move_text = ""
+        control.selected_pos = ()
+        control.bo.w, control.bo.h = w, h
+        control.bo.resize_pieces(w, h)
+        control.bo.set_every_pos()
 
     run = True
     # In the browser the page scales the canvas; a resizable window would be
@@ -79,7 +98,7 @@ async def main():
             
             if event.type == pygame.MOUSEBUTTONDOWN:
                 m_x, m_y = event.pos
-                if m_x < width:
+                if m_x < width and not control.result:
                     x, y = get_square_onclick(m_x, m_y, w, h)
                     if event.button == 1:
                         if control.bo.board[x][y] != 0:
@@ -91,6 +110,8 @@ async def main():
             
             if event.type == pygame.MOUSEBUTTONUP:
                 m_x, m_y = event.pos
+                if m_x >= width and control.result:
+                    new_game()
                 if m_x < width:
                     x, y = get_square_onclick(m_x, m_y, w, h)
                     if control.selected_pos:
@@ -134,13 +155,14 @@ async def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     control.bo.undo()
-                    control.bo.resize_pieces(w, h)
-                    control.bo.set_every_pos()
+                    after_history_change()
                 
                 if event.key == pygame.K_RIGHT:
                     control.bo.redo()
-                    control.bo.resize_pieces(w, h)
-                    control.bo.set_every_pos()
+                    after_history_change()
+
+                if event.key == pygame.K_r:
+                    new_game()
 
                 if event.key == pygame.K_SPACE:
                     if not control.selected_pos:
