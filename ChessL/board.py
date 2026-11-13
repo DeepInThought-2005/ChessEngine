@@ -1,5 +1,4 @@
-from itertools import count
-from numpy import flip, isin
+import asyncio
 from constants import *
 from pieces import *
 import random
@@ -218,52 +217,35 @@ class Board:
 
         return False
 
-    def promote(self, s, e):
-        # get window resolution
-        resolution = tk.Tk()
-        width = resolution.winfo_screenwidth()
-        height = resolution.winfo_screenheight()
-        resolution.destroy()
-        # Create Tkinter window to choose the promotion
-        root = tk.Tk()
-        root.title("Promote")
-        root.geometry('110x400+' + str(width // 2 - 55) + '+' + str(height // 2 - 200))
-        root.resizable(width=False, height=False)
-        def close_window():
-            if not self.promoted:
-                self.row = s[1]
-                self.col = s[0]
-            self.set_pos()
-            root.destroy()
-            return False
-
-        root.protocol("WM_DELETE_WINDOW", close_window)
-        Font = ("Arial", 15)
-        Width = 6
-        Height = 3
-        def Queening():
-            self.board[e[0]][e[1]] = Queen(e[0], e[1], self.turn)
-            root.destroy()
-        def Rooking():
-            self.board[e[0]][e[1]] = Rook(e[0], e[1], self.turn)
-            root.destroy()
-        def Bishoping():
-            self.board[e[0]][e[1]] = Bishop(e[0], e[1], self.turn)
-            root.destroy()
-        def Knighting():
-            self.board[e[0]][e[1]] = Knight(e[0], e[1], self.turn)
-            root.destroy()
-
-        
-        buttonQ = tk.Button(root, text="Queen", height=Height, width=Width, font=Font, command=Queening)
-        buttonR = tk.Button(root, text="Rook", height=Height, width=Width, font=Font, command=Rooking)
-        buttonB = tk.Button(root, text="Bishop", height=Height, width=Width, font=Font, command=Bishoping)
-        buttonN = tk.Button(root, text="Knight", height=Height, width=Width, font=Font, command=Knighting)
-        buttonQ.grid(column=0, row=1)
-        buttonR.grid(column=0, row=2)
-        buttonB.grid(column=0, row=3)
-        buttonN.grid(column=0, row=4)
-        root.mainloop()
+    async def promote(self, s, e):
+        # The pawn already stands on (e). The player picks a piece from a column drawn
+        # over the board; clicking anywhere else takes the move back.
+        win = pygame.display.get_surface()
+        w, h = self.w, self.h
+        step = 1 if e[1] == 0 else -1
+        options = [(piece, (e[0], e[1] + i * step)) for i, piece in enumerate((Queen, Rook, Bishop, Knight))]
+        shade = pygame.Surface((w * 8, h * 8), pygame.SRCALPHA)
+        shade.fill((0, 0, 0, 120))
+        win.blit(shade, (0, 0))
+        for piece, (c, r) in options:
+            pygame.draw.rect(win, (245, 245, 245), (c * w, r * h, w, h))
+            pygame.draw.rect(win, (60, 60, 60), (c * w, r * h, w, h), 2)
+            choice = piece(c, r, self.turn)
+            choice.resize(w, h)
+            choice.set_pos()
+            choice.draw(win)
+        pygame.display.update()
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    square = (event.pos[0] // w, event.pos[1] // h)
+                    for piece, option in options:
+                        if option == square:
+                            self.board[e[0]][e[1]] = piece(e[0], e[1], self.turn)
+                            return True
+                    self.load_FEN(self.undos[-1])
+                    return False
+            await asyncio.sleep(0)
 
     def undo(self):
         if len(self.undos) > 1:

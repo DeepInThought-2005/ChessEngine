@@ -2,6 +2,7 @@ import pygame
 from constants import *
 from pieces import *
 pygame.font.init()
+FONT = pygame.font.SysFont('Times New Roman', 50)
 
 
 class Control:
@@ -10,10 +11,13 @@ class Control:
         self.selected_pos = ()
         self.move_text = "Hi"
         self.mode = HUMAN_HUMAN
+        self.board_img = None
 
 
     def draw_window(self, win, w, h):
-        board_img = pygame.transform.scale(BOARD, (w, h))
+        if self.board_img is None or self.board_img.get_size() != (w, h):
+            self.board_img = pygame.transform.scale(BOARD, (w, h))
+        board_img = self.board_img
         win.blit(board_img, (0, 0))
         if self.bo.check(self.bo.turn):
             kp = self.bo.get_king(self.bo.turn)
@@ -32,8 +36,7 @@ class Control:
 
         # panel part
         pygame.draw.rect(win, panel_color, (w, 0, w // 4, h))
-        font = pygame.font.SysFont('Times New Roman', 50)
-        text = font.render(self.move_text, False, black)
+        text = FONT.render(self.move_text, False, black)
         win.blit(text, (w + w // 8 - text.get_width() // 2, h // 2 - text.get_height() // 2))
 
         pygame.display.update()

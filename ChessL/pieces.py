@@ -1,7 +1,7 @@
-from calendar import c
-from turtle import color
 from constants import *
-import tkinter as tk
+
+# Scaled piece images, shared by every board copy the engine creates.
+_scaled = {}
 
 
 class Piece:
@@ -19,7 +19,10 @@ class Piece:
     def resize(self, w, h):
         self.width = w
         self.height = h
-        self.img = pygame.transform.scale(self.img_type, (w, h))
+        key = (id(self.img_type), w, h)
+        if key not in _scaled:
+            _scaled[key] = pygame.transform.scale(self.img_type, (w, h))
+        self.img = _scaled[key]
     
 
     def set_pos(self):
